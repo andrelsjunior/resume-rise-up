@@ -5,7 +5,9 @@ import { useActivities } from "@/hooks/useActivities";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { ProfileModal } from "@/components/ProfileModal";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { FileText, MessageSquare, CreditCard, LogOut, User, Loader2 } from "lucide-react";
 
 const Dashboard = () => {
@@ -14,6 +16,7 @@ const Dashboard = () => {
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: activities, isLoading: activitiesLoading } = useActivities();
   const deductCredits = useDeductCredits();
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   const handleServiceClick = (serviceType: string, credits: number, title: string, route: string) => {
     if (!profile) return;
@@ -60,10 +63,15 @@ const Dashboard = () => {
           <div className="flex justify-between items-center h-16">
             <h1 className="text-xl font-semibold">ResumeRise Dashboard</h1>
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setProfileModalOpen(true)}
+                className="flex items-center space-x-2"
+              >
                 <User className="h-4 w-4" />
                 <span className="text-sm text-gray-600">{user?.email}</span>
-              </div>
+              </Button>
               <Button variant="outline" size="sm" onClick={signOut}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out
@@ -213,6 +221,8 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      <ProfileModal open={profileModalOpen} onOpenChange={setProfileModalOpen} />
     </div>
   );
 };

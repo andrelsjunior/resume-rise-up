@@ -1,16 +1,18 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminStats, useAllUsers } from "@/hooks/useAdminStats";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { ProfileModal } from "@/components/ProfileModal";
+import { useState } from "react";
 import { Users, CreditCard, FileText, TrendingUp, LogOut, User, Loader2 } from "lucide-react";
 
 const AdminDashboard = () => {
   const { user, signOut } = useAuth();
   const { data: stats, isLoading: statsLoading } = useAdminStats();
   const { data: users, isLoading: usersLoading } = useAllUsers();
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   if (statsLoading) {
     return (
@@ -29,8 +31,15 @@ const AdminDashboard = () => {
             <h1 className="text-xl font-semibold">Admin Dashboard</h1>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <User className="h-4 w-4" />
-                <span className="text-sm text-gray-600">{user?.email}</span>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setProfileModalOpen(true)}
+                  className="flex items-center space-x-2"
+                >
+                  <User className="h-4 w-4" />
+                  <span className="text-sm text-gray-600">{user?.email}</span>
+                </Button>
                 <Badge variant="secondary">Admin</Badge>
               </div>
               <Button variant="outline" size="sm" onClick={signOut}>
@@ -171,6 +180,8 @@ const AdminDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <ProfileModal open={profileModalOpen} onOpenChange={setProfileModalOpen} />
     </div>
   );
 };
