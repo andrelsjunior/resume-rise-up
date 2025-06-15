@@ -1,17 +1,56 @@
 
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile, useDeductCredits } from "@/hooks/useProfile";
+import { useActivities } from "@/hooks/useActivities";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
-import { FileText, MessageSquare, CreditCard, LogOut, User } from "lucide-react";
+import { FileText, MessageSquare, CreditCard, LogOut, User, Loader2 } from "lucide-react";
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: activities, isLoading: activitiesLoading } = useActivities();
+  const deductCredits = useDeductCredits();
 
-  const credits = 50; // This would come from your database
-  const maxCredits = 100;
+  const handleServiceClick = (serviceType: string, credits: number, title: string, route: string) => {
+    if (!profile) return;
+    
+    if (profile.credits < credits) {
+      return;
+    }
+    
+    deductCredits.mutate({
+      credits,
+      activityType: serviceType,
+      title,
+    });
+    
+    navigate(route);
+  };
+
+  const getActivityTypeDisplay = (type: string) => {
+    switch (type) {
+      case 'cv_generated':
+        return { icon: FileText, color: 'text-blue-600', label: 'CV Generated' };
+      case 'cover_letter_generated':
+        return { icon: FileText, color: 'text-green-600', label: 'Cover Letter Generated' };
+      case 'mock_interview_completed':
+        return { icon: MessageSquare, color: 'text-purple-600', label: 'Mock Interview Completed' };
+      default:
+        return { icon: FileText, color: 'text-gray-600', label: type };
+    }
+  };
+
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -47,19 +86,22 @@ const Dashboard = () => {
                 <CardDescription>Use credits to generate CVs, cover letters, and mock interviews</CardDescription>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold">{credits}</div>
-                <div className="text-sm text-gray-500">of {maxCredits}</div>
+                <div className="text-2xl font-bold">{profile?.credits || 0}</div>
+                <div className="text-sm text-gray-500">of {profile?.max_credits || 100}</div>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <Progress value={(credits / maxCredits) * 100} className="w-full" />
+            <Progress 
+              value={profile ? (profile.credits / profile.max_credits) * 100 : 0} 
+              className="w-full" 
+            />
           </CardContent>
         </Card>
 
         {/* Services Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/cv-generator")}>
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <FileText className="h-5 w-5 mr-2 text-blue-600" />
@@ -71,13 +113,18 @@ const Dashboard = () => {
               <p className="text-sm text-gray-600 mb-4">
                 Generate tailored CVs for different job applications using our AI-powered layered approach.
               </p>
-              <Button className="w-full">
+              <Button 
+                className="w-full" 
+                onClick={() => handleServiceClick('cv_generated', 5, 'Generated CV', '/cv-generator')}
+                disabled={!profile || profile.credits < 5 || deductCredits.isPending}
+              >
+                {deductCredits.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Generate CV (5 credits)
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/cover-letter")}>
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <FileText className="h-5 w-5 mr-2 text-green-600" />
@@ -89,13 +136,18 @@ const Dashboard = () => {
               <p className="text-sm text-gray-600 mb-4">
                 Create personalized cover letters that highlight your strengths and match job requirements.
               </p>
-              <Button className="w-full">
+              <Button 
+                className="w-full"
+                onClick={() => handleServiceClick('cover_letter_generated', 3, 'Generated Cover Letter', '/cover-letter')}
+                disabled={!profile || profile.credits < 3 || deductCredits.isPending}
+              >
+                {deductCredits.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Write Cover Letter (3 credits)
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/mock-interview")}>
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <MessageSquare className="h-5 w-5 mr-2 text-purple-600" />
@@ -107,7 +159,12 @@ const Dashboard = () => {
               <p className="text-sm text-gray-600 mb-4">
                 Simulate real job interviews with voice or text responses and get detailed feedback.
               </p>
-              <Button className="w-full">
+              <Button 
+                className="w-full"
+                onClick={() => handleServiceClick('mock_interview_completed', 10, 'Completed Mock Interview', '/mock-interview')}
+                disabled={!profile || profile.credits < 10 || deductCredits.isPending}
+              >
+                {deductCredits.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Start Interview (10 credits)
               </Button>
             </CardContent>
@@ -121,28 +178,38 @@ const Dashboard = () => {
             <CardDescription>Your latest generated content</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center">
-                  <FileText className="h-4 w-4 mr-3 text-blue-600" />
-                  <div>
-                    <p className="font-medium">Software Engineer CV</p>
-                    <p className="text-sm text-gray-500">Generated 2 hours ago</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm">View</Button>
+            {activitiesLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin" />
               </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center">
-                  <MessageSquare className="h-4 w-4 mr-3 text-purple-600" />
-                  <div>
-                    <p className="font-medium">Technical Interview Practice</p>
-                    <p className="text-sm text-gray-500">Score: 85% - 1 day ago</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm">Review</Button>
+            ) : activities && activities.length > 0 ? (
+              <div className="space-y-4">
+                {activities.map((activity) => {
+                  const { icon: Icon, color, label } = getActivityTypeDisplay(activity.activity_type);
+                  return (
+                    <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center">
+                        <Icon className={`h-4 w-4 mr-3 ${color}`} />
+                        <div>
+                          <p className="font-medium">{activity.title}</p>
+                          <p className="text-sm text-gray-500">
+                            {activity.score ? `Score: ${activity.score}% - ` : ''}
+                            {new Date(activity.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {activity.credits_used} credits
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No recent activity. Start using our services to see your history here!</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

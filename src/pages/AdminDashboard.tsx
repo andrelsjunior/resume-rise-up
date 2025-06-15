@@ -1,27 +1,24 @@
 
 import { useAuth } from "@/hooks/useAuth";
+import { useAdminStats, useAllUsers } from "@/hooks/useAdminStats";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Users, CreditCard, FileText, TrendingUp, LogOut, User } from "lucide-react";
+import { Users, CreditCard, FileText, TrendingUp, LogOut, User, Loader2 } from "lucide-react";
 
 const AdminDashboard = () => {
   const { user, signOut } = useAuth();
+  const { data: stats, isLoading: statsLoading } = useAdminStats();
+  const { data: users, isLoading: usersLoading } = useAllUsers();
 
-  // Mock data - in real app, this would come from your database
-  const stats = {
-    totalUsers: 1247,
-    activeUsers: 892,
-    totalCreditsUsed: 15420,
-    totalRevenue: 12380,
-  };
-
-  const recentUsers = [
-    { id: 1, email: "john@example.com", credits: 45, status: "active" },
-    { id: 2, email: "sarah@example.com", credits: 23, status: "active" },
-    { id: 3, email: "mike@example.com", credits: 0, status: "inactive" },
-  ];
+  if (statsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -54,8 +51,8 @@ const AdminDashboard = () => {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalUsers}</div>
-              <p className="text-xs text-muted-foreground">+12% from last month</p>
+              <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
+              <p className="text-xs text-muted-foreground">Registered users</p>
             </CardContent>
           </Card>
 
@@ -65,8 +62,8 @@ const AdminDashboard = () => {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.activeUsers}</div>
-              <p className="text-xs text-muted-foreground">+8% from last month</p>
+              <div className="text-2xl font-bold">{stats?.activeUsers || 0}</div>
+              <p className="text-xs text-muted-foreground">Users with credits</p>
             </CardContent>
           </Card>
 
@@ -76,8 +73,8 @@ const AdminDashboard = () => {
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalCreditsUsed}</div>
-              <p className="text-xs text-muted-foreground">+15% from last month</p>
+              <div className="text-2xl font-bold">{stats?.totalCreditsUsed || 0}</div>
+              <p className="text-xs text-muted-foreground">Total platform usage</p>
             </CardContent>
           </Card>
 
@@ -87,8 +84,8 @@ const AdminDashboard = () => {
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${stats.totalRevenue}</div>
-              <p className="text-xs text-muted-foreground">+20% from last month</p>
+              <div className="text-2xl font-bold">${stats?.totalRevenue || 0}</div>
+              <p className="text-xs text-muted-foreground">Estimated revenue</p>
             </CardContent>
           </Card>
         </div>
@@ -108,24 +105,39 @@ const AdminDashboard = () => {
                 <CardDescription>Manage customer accounts and credits</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {recentUsers.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div>
-                          <p className="font-medium">{user.email}</p>
-                          <p className="text-sm text-gray-500">Credits: {user.credits}</p>
+                {usersLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : users && users.length > 0 ? (
+                  <div className="space-y-4">
+                    {users.slice(0, 10).map((user) => (
+                      <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center space-x-4">
+                          <div>
+                            <p className="font-medium">{user.email}</p>
+                            <p className="text-sm text-gray-500">
+                              Credits: {user.credits} | Role: {user.role}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              Joined: {new Date(user.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge variant={user.credits > 0 ? "default" : "secondary"}>
+                            {user.credits > 0 ? "Active" : "Inactive"}
+                          </Badge>
+                          <Button variant="outline" size="sm">Edit</Button>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant={user.status === "active" ? "default" : "secondary"}>
-                          {user.status}
-                        </Badge>
-                        <Button variant="outline" size="sm">Edit</Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No users found</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

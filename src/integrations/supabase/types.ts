@@ -9,13 +9,84 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      activities: {
+        Row: {
+          activity_type: string
+          created_at: string | null
+          credits_used: number
+          id: string
+          metadata: Json | null
+          score: number | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string | null
+          credits_used: number
+          id?: string
+          metadata?: Json | null
+          score?: number | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string | null
+          credits_used?: number
+          id?: string
+          metadata?: Json | null
+          score?: number | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          credits: number | null
+          email: string | null
+          id: string
+          max_credits: number | null
+          role: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          credits?: number | null
+          email?: string | null
+          id: string
+          max_credits?: number | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          credits?: number | null
+          email?: string | null
+          id?: string
+          max_credits?: number | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      deduct_credits: {
+        Args: {
+          p_user_id: string
+          p_credits: number
+          p_activity_type: string
+          p_title: string
+          p_metadata?: Json
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
