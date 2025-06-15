@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile, useDeductCredits } from "@/hooks/useProfile";
 import { useActivities } from "@/hooks/useActivities";
@@ -9,6 +8,7 @@ import { ProfileModal } from "@/components/ProfileModal";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { FileText, MessageSquare, CreditCard, LogOut, User, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
@@ -17,21 +17,29 @@ const Dashboard = () => {
   const { data: activities, isLoading: activitiesLoading } = useActivities();
   const deductCredits = useDeductCredits();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const { toast } = useToast();
 
   const handleServiceClick = (serviceType: string, credits: number, title: string, route: string) => {
-    if (!profile) return;
-    
-    if (profile.credits < credits) {
+    if (!profile) {
+      toast({
+        title: "Error",
+        description: "Profile not loaded. Please try again.",
+        variant: "destructive",
+      });
       return;
     }
     
-    deductCredits.mutate({
-      credits,
-      activityType: serviceType,
-      title,
-    });
+    if (profile.credits < credits) {
+      toast({
+        title: "Insufficient Credits",
+        description: `You need ${credits} credits but only have ${profile.credits}. Please contact support to add more credits.`,
+        variant: "destructive",
+      });
+      return;
+    }
     
-    navigate(route);
+    // Navigate first, then deduct credits on the target page
+    navigate(route, { state: { deductCredits: true, credits, serviceType, title } });
   };
 
   const getActivityTypeDisplay = (type: string) => {
@@ -124,9 +132,8 @@ const Dashboard = () => {
               <Button 
                 className="w-full" 
                 onClick={() => handleServiceClick('cv_generated', 5, 'Generated CV', '/cv-generator')}
-                disabled={!profile || profile.credits < 5 || deductCredits.isPending}
+                disabled={!profile || profile.credits < 5}
               >
-                {deductCredits.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Generate CV (5 credits)
               </Button>
             </CardContent>
@@ -147,9 +154,8 @@ const Dashboard = () => {
               <Button 
                 className="w-full"
                 onClick={() => handleServiceClick('cover_letter_generated', 3, 'Generated Cover Letter', '/cover-letter')}
-                disabled={!profile || profile.credits < 3 || deductCredits.isPending}
+                disabled={!profile || profile.credits < 3}
               >
-                {deductCredits.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Write Cover Letter (3 credits)
               </Button>
             </CardContent>
@@ -170,9 +176,8 @@ const Dashboard = () => {
               <Button 
                 className="w-full"
                 onClick={() => handleServiceClick('mock_interview_completed', 10, 'Completed Mock Interview', '/mock-interview')}
-                disabled={!profile || profile.credits < 10 || deductCredits.isPending}
+                disabled={!profile || profile.credits < 10}
               >
-                {deductCredits.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Start Interview (10 credits)
               </Button>
             </CardContent>
@@ -193,6 +198,19 @@ const Dashboard = () => {
             ) : activities && activities.length > 0 ? (
               <div className="space-y-4">
                 {activities.map((activity) => {
+                  const getActivityTypeDisplay = (type: string) => {
+                    switch (type) {
+                      case 'cv_generated':
+                        return { icon: FileText, color: 'text-blue-600', label: 'CV Generated' };
+                      case 'cover_letter_generated':
+                        return { icon: FileText, color: 'text-green-600', label: 'Cover Letter Generated' };
+                      case 'mock_interview_completed':
+                        return { icon: MessageSquare, color: 'text-purple-600', label: 'Mock Interview Completed' };
+                      default:
+                        return { icon: FileText, color: 'text-gray-600', label: type };
+                    }
+                  };
+                  
                   const { icon: Icon, color, label } = getActivityTypeDisplay(activity.activity_type);
                   return (
                     <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
