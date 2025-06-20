@@ -3,51 +3,56 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Download, Eye, Loader2, Plus, Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, Download, FileText, Loader2 } from "lucide-react";
 import { InputWithAI } from "@/components/InputWithAI";
-
-interface Experience {
-  company: string;
-  position: string;
-  duration: string;
-  description: string;
-}
-
-interface Education {
-  institution: string;
-  degree: string;
-  year: string;
-  gpa: string;
-}
+import { HelpVideoButton } from "@/components/HelpVideoButton";
+import { useToast } from "@/hooks/use-toast";
 
 const CVGenerator = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [generating, setGenerating] = useState(false);
-  const [currentStep, setCurrentStep] = useState("personal");
 
-  const [formData, setFormData] = useState({
-    personal: {
-      fullName: "",
-      email: "",
-      phone: "",
-      location: "",
-      linkedIn: "",
-    },
+  const [personalInfo, setPersonalInfo] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    address: "",
+    linkedin: "",
+    website: "",
     summary: "",
-    experience: [
-      { company: "", position: "", duration: "", description: "" }
-    ] as Experience[],
-    education: [
-      { institution: "", degree: "", year: "", gpa: "" }
-    ] as Education[],
-    skills: "",
-    jobDescription: "",
+  });
+
+  const [experience, setExperience] = useState([
+    {
+      id: 1,
+      company: "",
+      position: "",
+      startDate: "",
+      endDate: "",
+      description: "",
+      current: false,
+    },
+  ]);
+
+  const [education, setEducation] = useState([
+    {
+      id: 1,
+      institution: "",
+      degree: "",
+      field: "",
+      startDate: "",
+      endDate: "",
+      gpa: "",
+    },
+  ]);
+
+  const [skills, setSkills] = useState({
+    technical: "",
+    soft: "",
+    languages: "",
+    certifications: "",
   });
 
   const handleGenerate = async () => {
@@ -69,60 +74,28 @@ const CVGenerator = () => {
     }
   };
 
-  const updatePersonalData = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      personal: {
-        ...prev.personal,
-        [field]: value
-      }
-    }));
-  };
-
   const addExperience = () => {
-    setFormData(prev => ({
-      ...prev,
-      experience: [...prev.experience, { company: "", position: "", duration: "", description: "" }]
-    }));
-  };
-
-  const removeExperience = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      experience: prev.experience.filter((_, i) => i !== index)
-    }));
-  };
-
-  const updateExperience = (index: number, field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      experience: prev.experience.map((exp, i) => 
-        i === index ? { ...exp, [field]: value } : exp
-      )
-    }));
+    setExperience([...experience, {
+      id: Date.now(),
+      company: "",
+      position: "",
+      startDate: "",
+      endDate: "",
+      description: "",
+      current: false,
+    }]);
   };
 
   const addEducation = () => {
-    setFormData(prev => ({
-      ...prev,
-      education: [...prev.education, { institution: "", degree: "", year: "", gpa: "" }]
-    }));
-  };
-
-  const removeEducation = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      education: prev.education.filter((_, i) => i !== index)
-    }));
-  };
-
-  const updateEducation = (index: number, field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      education: prev.education.map((edu, i) => 
-        i === index ? { ...edu, [field]: value } : edu
-      )
-    }));
+    setEducation([...education, {
+      id: Date.now(),
+      institution: "",
+      degree: "",
+      field: "",
+      startDate: "",
+      endDate: "",
+      gpa: "",
+    }]);
   };
 
   return (
@@ -139,293 +112,317 @@ const CVGenerator = () => {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>AI-Powered CV Generation</CardTitle>
-            <CardDescription>
-              Create a professional CV tailored to your target job. Fill in each section and our AI will optimize the content for maximum impact.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Tabs defaultValue="personal" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="personal">Personal Info</TabsTrigger>
+            <TabsTrigger value="experience">Experience</TabsTrigger>
+            <TabsTrigger value="education">Education</TabsTrigger>
+            <TabsTrigger value="skills">Skills</TabsTrigger>
+          </TabsList>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Tabs value={currentStep} onValueChange={setCurrentStep} className="space-y-4">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="personal" className="text-xs">Personal</TabsTrigger>
-                <TabsTrigger value="experience" className="text-xs">Experience</TabsTrigger>
-                <TabsTrigger value="education" className="text-xs">Education</TabsTrigger>
-                <TabsTrigger value="skills" className="text-xs">Skills</TabsTrigger>
-                <TabsTrigger value="job" className="text-xs">Job Match</TabsTrigger>
-              </TabsList>
+          <TabsContent value="personal">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Personal Information</CardTitle>
+                  <CardDescription>
+                    Enter your basic contact information and professional summary
+                  </CardDescription>
+                </div>
+                <HelpVideoButton
+                  videoUrl="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                  title="Como preencher informações pessoais"
+                />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <InputWithAI
+                    label="Full Name"
+                    fieldName="fullName"
+                    value={personalInfo.fullName}
+                    onChange={(value) => setPersonalInfo(prev => ({ ...prev, fullName: value }))}
+                    placeholder="John Doe"
+                  />
+                  <InputWithAI
+                    label="Email"
+                    fieldName="email"
+                    value={personalInfo.email}
+                    onChange={(value) => setPersonalInfo(prev => ({ ...prev, email: value }))}
+                    placeholder="john@example.com"
+                  />
+                  <InputWithAI
+                    label="Phone"
+                    fieldName="phone"
+                    value={personalInfo.phone}
+                    onChange={(value) => setPersonalInfo(prev => ({ ...prev, phone: value }))}
+                    placeholder="+1 (555) 123-4567"
+                  />
+                  <InputWithAI
+                    label="Address"
+                    fieldName="address"
+                    value={personalInfo.address}
+                    onChange={(value) => setPersonalInfo(prev => ({ ...prev, address: value }))}
+                    placeholder="New York, NY"
+                  />
+                  <InputWithAI
+                    label="LinkedIn"
+                    fieldName="linkedin"
+                    value={personalInfo.linkedin}
+                    onChange={(value) => setPersonalInfo(prev => ({ ...prev, linkedin: value }))}
+                    placeholder="linkedin.com/in/johndoe"
+                  />
+                  <InputWithAI
+                    label="Website"
+                    fieldName="website"
+                    value={personalInfo.website}
+                    onChange={(value) => setPersonalInfo(prev => ({ ...prev, website: value }))}
+                    placeholder="johndoe.com"
+                  />
+                </div>
+                <InputWithAI
+                  label="Professional Summary"
+                  fieldName="summary"
+                  value={personalInfo.summary}
+                  onChange={(value) => setPersonalInfo(prev => ({ ...prev, summary: value }))}
+                  placeholder="Brief description of your professional background and goals..."
+                  type="textarea"
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              <TabsContent value="personal">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Personal Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
+          <TabsContent value="experience">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Work Experience</CardTitle>
+                  <CardDescription>
+                    Add your professional work experience
+                  </CardDescription>
+                </div>
+                <HelpVideoButton
+                  videoUrl="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                  title="Como descrever experiência profissional"
+                />
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {experience.map((exp, index) => (
+                  <div key={exp.id} className="border rounded-lg p-4 space-y-4">
+                    <h3 className="font-medium">Experience {index + 1}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <InputWithAI
-                        label="Full Name"
-                        fieldName="fullName"
-                        value={formData.personal.fullName}
-                        onChange={(value) => updatePersonalData('fullName', value)}
-                        placeholder="Your full name"
+                        label="Company"
+                        fieldName={`company_${exp.id}`}
+                        value={exp.company}
+                        onChange={(value) => setExperience(prev => 
+                          prev.map(e => e.id === exp.id ? { ...e, company: value } : e)
+                        )}
+                        placeholder="Company Name"
                       />
                       <InputWithAI
-                        label="Email"
-                        fieldName="email"
-                        value={formData.personal.email}
-                        onChange={(value) => updatePersonalData('email', value)}
-                        placeholder="your.email@example.com"
+                        label="Position"
+                        fieldName={`position_${exp.id}`}
+                        value={exp.position}
+                        onChange={(value) => setExperience(prev => 
+                          prev.map(e => e.id === exp.id ? { ...e, position: value } : e)
+                        )}
+                        placeholder="Job Title"
                       />
                       <InputWithAI
-                        label="Phone"
-                        fieldName="phone"
-                        value={formData.personal.phone}
-                        onChange={(value) => updatePersonalData('phone', value)}
-                        placeholder="(11) 99999-9999"
+                        label="Start Date"
+                        fieldName={`startDate_${exp.id}`}
+                        value={exp.startDate}
+                        onChange={(value) => setExperience(prev => 
+                          prev.map(e => e.id === exp.id ? { ...e, startDate: value } : e)
+                        )}
+                        placeholder="MM/YYYY"
                       />
                       <InputWithAI
-                        label="Location"
-                        fieldName="location"
-                        value={formData.personal.location}
-                        onChange={(value) => updatePersonalData('location', value)}
-                        placeholder="City, State - Country"
+                        label="End Date"
+                        fieldName={`endDate_${exp.id}`}
+                        value={exp.endDate}
+                        onChange={(value) => setExperience(prev => 
+                          prev.map(e => e.id === exp.id ? { ...e, endDate: value } : e)
+                        )}
+                        placeholder="MM/YYYY or Present"
                       />
                     </div>
                     <InputWithAI
-                      label="LinkedIn"
-                      fieldName="linkedIn"
-                      value={formData.personal.linkedIn}
-                      onChange={(value) => updatePersonalData('linkedIn', value)}
-                      placeholder="linkedin.com/in/yourprofile"
-                    />
-                    <InputWithAI
-                      label="Professional Summary"
-                      fieldName="summary"
+                      label="Description"
+                      fieldName={`description_${exp.id}`}
+                      value={exp.description}
+                      onChange={(value) => setExperience(prev => 
+                        prev.map(e => e.id === exp.id ? { ...e, description: value } : e)
+                      )}
+                      placeholder="Describe your responsibilities and achievements..."
                       type="textarea"
-                      value={formData.summary}
-                      onChange={(value) => setFormData(prev => ({ ...prev, summary: value }))}
-                      placeholder="Brief professional summary..."
-                      className="min-h-[100px]"
                     />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="experience">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Work Experience</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {formData.experience.map((exp, index) => (
-                      <div key={index} className="space-y-3 p-4 border rounded-lg">
-                        <div className="flex justify-between items-center">
-                          <h4 className="font-medium">Experience {index + 1}</h4>
-                          {formData.experience.length > 1 && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => removeExperience(index)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <InputWithAI
-                            label="Company"
-                            fieldName="company"
-                            value={exp.company}
-                            onChange={(value) => updateExperience(index, 'company', value)}
-                            placeholder="Company name"
-                          />
-                          <InputWithAI
-                            label="Position"
-                            fieldName="position"
-                            value={exp.position}
-                            onChange={(value) => updateExperience(index, 'position', value)}
-                            placeholder="Job title"
-                          />
-                        </div>
-                        <div>
-                          <Label>Duration</Label>
-                          <Input
-                            value={exp.duration}
-                            onChange={(e) => updateExperience(index, 'duration', e.target.value)}
-                            placeholder="Jan 2020 - Present"
-                          />
-                        </div>
-                        <InputWithAI
-                          label="Description"
-                          fieldName="description"
-                          type="textarea"
-                          value={exp.description}
-                          onChange={(value) => updateExperience(index, 'description', value)}
-                          placeholder="Key achievements and responsibilities..."
-                          className="min-h-[100px]"
-                        />
-                      </div>
-                    ))}
-                    <Button variant="outline" className="w-full" onClick={addExperience}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Experience
-                    </Button>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="education">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Education</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {formData.education.map((edu, index) => (
-                      <div key={index} className="space-y-3 p-4 border rounded-lg">
-                        <div className="flex justify-between items-center">
-                          <h4 className="font-medium">Education {index + 1}</h4>
-                          {formData.education.length > 1 && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => removeEducation(index)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <InputWithAI
-                            label="Institution"
-                            fieldName="institution"
-                            value={edu.institution}
-                            onChange={(value) => updateEducation(index, 'institution', value)}
-                            placeholder="University/School name"
-                          />
-                          <InputWithAI
-                            label="Degree"
-                            fieldName="degree"
-                            value={edu.degree}
-                            onChange={(value) => updateEducation(index, 'degree', value)}
-                            placeholder="Degree/Certification"
-                          />
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label>Year</Label>
-                            <Input
-                              value={edu.year}
-                              onChange={(e) => updateEducation(index, 'year', e.target.value)}
-                              placeholder="2020-2024"
-                            />
-                          </div>
-                          <div>
-                            <Label>GPA (Optional)</Label>
-                            <Input
-                              value={edu.gpa}
-                              onChange={(e) => updateEducation(index, 'gpa', e.target.value)}
-                              placeholder="3.8/4.0"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    <Button variant="outline" className="w-full" onClick={addEducation}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Education
-                    </Button>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="skills">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Skills & Competencies</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <InputWithAI
-                      label="Skills (comma-separated)"
-                      fieldName="skills"
-                      type="textarea"
-                      value={formData.skills}
-                      onChange={(value) => setFormData(prev => ({ ...prev, skills: value }))}
-                      placeholder="JavaScript, React, Python, Leadership, Communication..."
-                      className="min-h-[100px]"
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="job">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Job Description Matching</CardTitle>
-                    <CardDescription>
-                      Paste the job description to tailor your CV for this specific role
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <InputWithAI
-                      label="Job Description"
-                      fieldName="jobDescription"
-                      type="textarea"
-                      value={formData.jobDescription}
-                      onChange={(value) => setFormData(prev => ({ ...prev, jobDescription: value }))}
-                      placeholder="Paste the full job description here..."
-                      className="min-h-[200px]"
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          <div className="lg:col-span-1">
-            <Card className="sticky top-6">
-              <CardHeader>
-                <CardTitle>Generate Your CV</CardTitle>
-                <CardDescription>
-                  AI will analyze your information and create a professional CV optimized for your target role.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-sm text-gray-600">
-                  <p><strong>Cost:</strong> 5 credits</p>
-                  <p><strong>Generation time:</strong> ~30 seconds</p>
-                </div>
-                <Button 
-                  onClick={handleGenerate} 
-                  className="w-full" 
-                  disabled={generating}
-                >
-                  {generating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating CV...
-                    </>
-                  ) : (
-                    "Generate CV"
-                  )}
+                  </div>
+                ))}
+                <Button onClick={addExperience} variant="outline" className="w-full">
+                  Add Another Experience
                 </Button>
-                <div className="space-y-2">
-                  <Button variant="outline" className="w-full" disabled>
-                    <Eye className="mr-2 h-4 w-4" />
-                    Preview CV
-                  </Button>
-                  <Button variant="outline" className="w-full" disabled>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download PDF
-                  </Button>
-                </div>
               </CardContent>
             </Card>
-          </div>
+          </TabsContent>
+
+          <TabsContent value="education">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Education</CardTitle>
+                  <CardDescription>
+                    Add your educational background
+                  </CardDescription>
+                </div>
+                <HelpVideoButton
+                  videoUrl="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                  title="Como organizar informações educacionais"
+                />
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {education.map((edu, index) => (
+                  <div key={edu.id} className="border rounded-lg p-4 space-y-4">
+                    <h3 className="font-medium">Education {index + 1}</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <InputWithAI
+                        label="Institution"
+                        fieldName={`institution_${edu.id}`}
+                        value={edu.institution}
+                        onChange={(value) => setEducation(prev => 
+                          prev.map(e => e.id === edu.id ? { ...e, institution: value } : e)
+                        )}
+                        placeholder="University Name"
+                      />
+                      <InputWithAI
+                        label="Degree"
+                        fieldName={`degree_${edu.id}`}
+                        value={edu.degree}
+                        onChange={(value) => setEducation(prev => 
+                          prev.map(e => e.id === edu.id ? { ...e, degree: value } : e)
+                        )}
+                        placeholder="Bachelor's, Master's, etc."
+                      />
+                      <InputWithAI
+                        label="Field of Study"
+                        fieldName={`field_${edu.id}`}
+                        value={edu.field}
+                        onChange={(value) => setEducation(prev => 
+                          prev.map(e => e.id === edu.id ? { ...e, field: value } : e)
+                        )}
+                        placeholder="Computer Science, Business, etc."
+                      />
+                      <InputWithAI
+                        label="GPA (Optional)"
+                        fieldName={`gpa_${edu.id}`}
+                        value={edu.gpa}
+                        onChange={(value) => setEducation(prev => 
+                          prev.map(e => e.id === edu.id ? { ...e, gpa: value } : e)
+                        )}
+                        placeholder="3.8/4.0"
+                      />
+                      <InputWithAI
+                        label="Start Date"
+                        fieldName={`eduStartDate_${edu.id}`}
+                        value={edu.startDate}
+                        onChange={(value) => setEducation(prev => 
+                          prev.map(e => e.id === edu.id ? { ...e, startDate: value } : e)
+                        )}
+                        placeholder="MM/YYYY"
+                      />
+                      <InputWithAI
+                        label="End Date"
+                        fieldName={`eduEndDate_${edu.id}`}
+                        value={edu.endDate}
+                        onChange={(value) => setEducation(prev => 
+                          prev.map(e => e.id === edu.id ? { ...e, endDate: value } : e)
+                        )}
+                        placeholder="MM/YYYY"
+                      />
+                    </div>
+                  </div>
+                ))}
+                <Button onClick={addEducation} variant="outline" className="w-full">
+                  Add Another Education
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="skills">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Skills & Qualifications</CardTitle>
+                  <CardDescription>
+                    List your technical skills, soft skills, and certifications
+                  </CardDescription>
+                </div>
+                <HelpVideoButton
+                  videoUrl="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                  title="Como destacar suas habilidades"
+                />
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <InputWithAI
+                  label="Technical Skills"
+                  fieldName="technicalSkills"
+                  value={skills.technical}
+                  onChange={(value) => setSkills(prev => ({ ...prev, technical: value }))}
+                  placeholder="React, Node.js, Python, SQL, etc."
+                  type="textarea"
+                />
+                <InputWithAI
+                  label="Soft Skills"
+                  fieldName="softSkills"
+                  value={skills.soft}
+                  onChange={(value) => setSkills(prev => ({ ...prev, soft: value }))}
+                  placeholder="Leadership, Communication, Problem-solving, etc."
+                  type="textarea"
+                />
+                <InputWithAI
+                  label="Languages"
+                  fieldName="languages"
+                  value={skills.languages}
+                  onChange={(value) => setSkills(prev => ({ ...prev, languages: value }))}
+                  placeholder="English (Fluent), Spanish (Intermediate), etc."
+                  type="textarea"
+                />
+                <InputWithAI
+                  label="Certifications"
+                  fieldName="certifications"
+                  value={skills.certifications}
+                  onChange={(value) => setSkills(prev => ({ ...prev, certifications: value }))}
+                  placeholder="AWS Certified, Google Analytics, etc."
+                  type="textarea"
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        <div className="flex justify-center space-x-4 mt-8">
+          <Button onClick={handleGenerate} disabled={generating} size="lg">
+            {generating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Generating CV...
+              </>
+            ) : (
+              <>
+                <FileText className="mr-2 h-4 w-4" />
+                Generate CV (5 credits)
+              </>
+            )}
+          </Button>
+          <Button variant="outline" size="lg" disabled>
+            Preview CV
+          </Button>
+          <Button variant="outline" size="lg" disabled>
+            <Download className="mr-2 h-4 w-4" />
+            Download PDF
+          </Button>
         </div>
       </div>
     </div>
