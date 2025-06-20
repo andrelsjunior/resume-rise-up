@@ -8,10 +8,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Download, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useCredits } from "@/hooks/useCredits"; // Import useCredits
+import { useAuth } from "@/hooks/useAuth"; // To get current user ID
+import { supabase } from "@/integrations/supabase/client"; // For saving to DB
+
+const COST_OF_COVER_LETTER_GENERATION = 3; // Define cost
 
 const CoverLetterGenerator = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth(); // Initialize useAuth
+  const { credits, checkCredits, spendCredits, isLoading: creditsLoading } = useCredits(); // Initialize useCredits
   const [generating, setGenerating] = useState(false);
   const [generatedLetter, setGeneratedLetter] = useState("");
 
@@ -25,12 +32,26 @@ const CoverLetterGenerator = () => {
   });
 
   const handleGenerate = async () => {
+    if (creditsLoading) {
+      toast({
+        title: "Aguarde",
+        description: "Verificando seus créditos...",
+      });
+      return;
+    }
+
+    if (!checkCredits(COST_OF_COVER_LETTER_GENERATION)) {
+      return; // checkCredits shows toast
+    }
+
     setGenerating(true);
+    let letterContent = ""; // To store the generated letter
+
     try {
       // Simulate AI generation
       await new Promise(resolve => setTimeout(resolve, 2500));
       
-      const mockLetter = `Dear ${formData.hiringManager || 'Hiring Manager'},
+      letterContent = `Dear ${formData.hiringManager || 'Hiring Manager'},
 
 I am writing to express my strong interest in the ${formData.position} position at ${formData.companyName}. With my background in software development and passion for creating innovative solutions, I am excited about the opportunity to contribute to your team.
 
@@ -41,17 +62,60 @@ What particularly excites me about ${formData.companyName} is your commitment to
 I would welcome the opportunity to discuss how my experience and enthusiasm can contribute to ${formData.companyName}'s continued success. Thank you for considering my application.
 
 Sincerely,
-[Your Name]`;
+[Your Name]`; // Replace [Your Name] appropriately if user data is available
 
-      setGeneratedLetter(mockLetter);
-      toast({
-        title: "Cover Letter Generated!",
-        description: "Your personalized cover letter has been created successfully.",
-      });
-    } catch (error) {
+      setGeneratedLetter(letterContent); // Show letter in UI first
+
+      // Attempt to save to Supabase
+      if (user && letterContent) {
+        const { error: saveError } = await supabase
+          .from('cover_letters')
+          .insert({
+            user_id: user.id,
+            title: `Cover Letter for ${formData.position} at ${formData.companyName}`,
+            content: letterContent,
+          });
+
+        if (saveError) {
+          console.error("Error saving cover letter:", saveError);
+          toast({
+            title: "Error Saving Letter",
+            description: "Your cover letter was generated but could not be saved. Please copy it manually. " + saveError.message,
+            variant: "destructive",
+            duration: 7000,
+          });
+          // Decide if we should still attempt to spend credits if saving failed.
+          // For now, let's assume if saving fails, we don't spend credits.
+          // Or, you might spend credits first, then save, and handle save failure differently.
+          // Current logic: save first, then spend.
+          setGenerating(false); // Stop loading if saving failed critically
+          return;
+        }
+      } else {
+        throw new Error("User not authenticated or letter content empty, cannot save.");
+      }
+
+      // If saving was successful, attempt to spend credits
+      const creditsSpentSuccessfully = await spendCredits(COST_OF_COVER_LETTER_GENERATION);
+
+      if (creditsSpentSuccessfully) {
+        toast({
+          title: "Cover Letter Generated & Saved!",
+          description: "Credits have been deducted.",
+        });
+      } else {
+        toast({
+          title: "Cover Letter Saved, but Credit Issue",
+          description: "Your letter was saved. Please contact support regarding credit deduction.",
+          variant: "destructive", // Or "warning"
+        });
+      }
+
+    } catch (error: any) {
+      console.error("Error during cover letter generation/saving:", error);
       toast({
         title: "Error",
-        description: "Failed to generate cover letter. Please try again.",
+        description: error.message || "Failed to generate or save cover letter. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -140,9 +204,9 @@ Sincerely,
                 <Button 
                   onClick={handleGenerate} 
                   className="w-full" 
-                  disabled={generating || !formData.companyName || !formData.position}
+                  disabled={generating || creditsLoading || !formData.companyName || !formData.position}
                 >
-                  {generating ? (
+                  {generating || creditsLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Generating Cover Letter...

@@ -8,10 +8,17 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Mic, MicOff, Play, Square, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useCredits } from "@/hooks/useCredits"; // Import useCredits
+import { useAuth } from "@/hooks/useAuth"; // Import useAuth
+import { supabase } from "@/integrations/supabase/client"; // Import supabase
+
+const COST_OF_MOCK_INTERVIEW = 10; // Define cost
 
 const MockInterview = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth(); // Initialize useAuth
+  const { credits, checkCredits, spendCredits, isLoading: creditsLoading } = useCredits(); // Initialize useCredits
   const [isRecording, setIsRecording] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
@@ -30,6 +37,13 @@ const MockInterview = () => {
   ];
 
   const handleStartInterview = () => {
+    if (creditsLoading) {
+      toast({ title: "Aguarde", description: "Verificando seus créditos..." });
+      return;
+    }
+    if (!checkCredits(COST_OF_MOCK_INTERVIEW)) {
+      return; // checkCredits shows toast
+    }
     setIsStarted(true);
     toast({
       title: "Interview Started",
@@ -86,15 +100,82 @@ const MockInterview = () => {
   const completeInterview = async () => {
     setInterviewComplete(true);
     
-    // Simulate AI scoring
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    const mockScore = Math.floor(Math.random() * 30) + 70; // Random score between 70-100
-    setScore(mockScore);
+    // Simulate AI scoring & feedback generation
+    const mockScoreValue = Math.floor(Math.random() * 30) + 70;
+    setScore(mockScoreValue);
     
-    toast({
-      title: "Interview Complete!",
-      description: `Your interview has been analyzed. Score: ${mockScore}/100`,
-    });
+    const detailedFeedback = {
+      communicationScore: 85, // example
+      technicalKnowledgeScore: 78, // example
+      problemSolvingScore: 82, // example
+      strengths: [
+        "Clear and confident communication style",
+        "Good use of specific examples in responses",
+        "Demonstrated strong problem-solving approach",
+      ],
+      areasForImprovement: [
+        "Consider adding more technical details in responses",
+        "Practice the STAR method for behavioral questions",
+        "Research company-specific information for better customization",
+      ],
+    };
+
+    // Prepare data for saving
+    const interviewDataToSave = {
+      user_id: user?.id,
+      interview_type: "General AI Mock Interview", // Example type
+      questions_and_answers: questions.map((q, index) => ({
+        question: q,
+        answer: answers[index] || "N/A (No text answer provided)", // Or handle voice answers if they were stored
+      })),
+      overall_feedback: JSON.stringify(detailedFeedback), // Store structured feedback as JSON string in text field
+      overall_score: mockScoreValue,
+      status: "completed",
+      // job_description and user_resume_text could be added if collected earlier
+    };
+
+    try {
+      if (user) {
+        const { error: saveError } = await supabase
+          .from('mock_interviews')
+          .insert(interviewDataToSave);
+
+        if (saveError) {
+          console.error("Error saving mock interview:", saveError);
+          toast({
+            title: "Error Saving Interview",
+            description: "Your interview was completed but could not be saved. " + saveError.message,
+            variant: "destructive",
+            duration: 7000,
+          });
+          // Don't spend credits if saving failed
+          return;
+        }
+      } else {
+        throw new Error("User not authenticated, cannot save interview.");
+      }
+
+      const creditsSpentSuccessfully = await spendCredits(COST_OF_MOCK_INTERVIEW);
+      if (creditsSpentSuccessfully) {
+        toast({
+          title: "Interview Complete & Saved!",
+          description: `Score: ${mockScoreValue}/100. Credits deducted.`,
+        });
+      } else {
+        toast({
+          title: "Interview Saved, but Credit Issue",
+          description: `Score: ${mockScoreValue}/100. Please contact support regarding credit deduction.`,
+          variant: "destructive", // or "warning"
+        });
+      }
+    } catch (error: any) {
+      console.error("Error during interview completion/saving:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save interview or process credits.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!isStarted) {
@@ -143,7 +224,7 @@ const MockInterview = () => {
                   <p><strong>Format:</strong> You can answer using voice recording or text</p>
                 </div>
                 
-                <Button onClick={handleStartInterview} size="lg" className="w-full">
+                <Button onClick={handleStartInterview} size="lg" className="w-full" disabled={creditsLoading}>
                   <Play className="mr-2 h-4 w-4" />
                   Start Mock Interview
                 </Button>
