@@ -1,5 +1,6 @@
-import { useAuthMock } from "@/hooks/useAuthMock";
-import { useAdminStatsMock, useAllUsers } from "@/hooks/useAdminStatsMock";
+
+import { useAuth } from "@/hooks/useAuthMock";
+import { useAdminStats, useAllUsers } from "@/hooks/useAdminStatsMock";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

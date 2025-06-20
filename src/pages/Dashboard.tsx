@@ -1,6 +1,8 @@
-import { useAuthMock } from "@/hooks/useAuthMock";
-import { useProfileMock } from "@/hooks/useProfileMock";
-import { useActivitiesMock } from "@/hooks/useActivitiesMock";
+
+import { useAuth } from "@/hooks/useAuthMock";
+import { useProfile } from "@/hooks/useProfileMock";
+import { useActivities } from "@/hooks/useActivitiesMock";
+import { useDeductCredits } from "@/hooks/useProfileMock";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
