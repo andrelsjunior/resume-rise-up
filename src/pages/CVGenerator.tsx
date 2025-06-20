@@ -7,8 +7,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Download, Eye, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Eye, Loader2, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { InputWithAI } from "@/components/InputWithAI";
+
+interface Experience {
+  company: string;
+  position: string;
+  duration: string;
+  description: string;
+}
+
+interface Education {
+  institution: string;
+  degree: string;
+  year: string;
+  gpa: string;
+}
 
 const CVGenerator = () => {
   const navigate = useNavigate();
@@ -27,10 +42,10 @@ const CVGenerator = () => {
     summary: "",
     experience: [
       { company: "", position: "", duration: "", description: "" }
-    ],
+    ] as Experience[],
     education: [
       { institution: "", degree: "", year: "", gpa: "" }
-    ],
+    ] as Education[],
     skills: "",
     jobDescription: "",
   });
@@ -38,7 +53,6 @@ const CVGenerator = () => {
   const handleGenerate = async () => {
     setGenerating(true);
     try {
-      // Simulate AI generation
       await new Promise(resolve => setTimeout(resolve, 3000));
       toast({
         title: "CV Generated Successfully!",
@@ -55,10 +69,59 @@ const CVGenerator = () => {
     }
   };
 
-  const updateFormData = (section: string, data: any) => {
+  const updatePersonalData = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
-      [section]: data
+      personal: {
+        ...prev.personal,
+        [field]: value
+      }
+    }));
+  };
+
+  const addExperience = () => {
+    setFormData(prev => ({
+      ...prev,
+      experience: [...prev.experience, { company: "", position: "", duration: "", description: "" }]
+    }));
+  };
+
+  const removeExperience = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      experience: prev.experience.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateExperience = (index: number, field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      experience: prev.experience.map((exp, i) => 
+        i === index ? { ...exp, [field]: value } : exp
+      )
+    }));
+  };
+
+  const addEducation = () => {
+    setFormData(prev => ({
+      ...prev,
+      education: [...prev.education, { institution: "", degree: "", year: "", gpa: "" }]
+    }));
+  };
+
+  const removeEducation = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      education: prev.education.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateEducation = (index: number, field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      education: prev.education.map((edu, i) => 
+        i === index ? { ...edu, [field]: value } : edu
+      )
     }));
   };
 
@@ -104,49 +167,51 @@ const CVGenerator = () => {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="fullName">Full Name</Label>
-                        <Input
-                          id="fullName"
-                          value={formData.personal.fullName}
-                          onChange={(e) => updateFormData('personal', { ...formData.personal, fullName: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={formData.personal.email}
-                          onChange={(e) => updateFormData('personal', { ...formData.personal, email: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input
-                          id="phone"
-                          value={formData.personal.phone}
-                          onChange={(e) => updateFormData('personal', { ...formData.personal, phone: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="location">Location</Label>
-                        <Input
-                          id="location"
-                          value={formData.personal.location}
-                          onChange={(e) => updateFormData('personal', { ...formData.personal, location: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="summary">Professional Summary</Label>
-                      <Textarea
-                        id="summary"
-                        placeholder="Brief professional summary..."
-                        value={formData.summary}
-                        onChange={(e) => setFormData(prev => ({ ...prev, summary: e.target.value }))}
+                      <InputWithAI
+                        label="Full Name"
+                        fieldName="fullName"
+                        value={formData.personal.fullName}
+                        onChange={(value) => updatePersonalData('fullName', value)}
+                        placeholder="Your full name"
+                      />
+                      <InputWithAI
+                        label="Email"
+                        fieldName="email"
+                        value={formData.personal.email}
+                        onChange={(value) => updatePersonalData('email', value)}
+                        placeholder="your.email@example.com"
+                      />
+                      <InputWithAI
+                        label="Phone"
+                        fieldName="phone"
+                        value={formData.personal.phone}
+                        onChange={(value) => updatePersonalData('phone', value)}
+                        placeholder="(11) 99999-9999"
+                      />
+                      <InputWithAI
+                        label="Location"
+                        fieldName="location"
+                        value={formData.personal.location}
+                        onChange={(value) => updatePersonalData('location', value)}
+                        placeholder="City, State - Country"
                       />
                     </div>
+                    <InputWithAI
+                      label="LinkedIn"
+                      fieldName="linkedIn"
+                      value={formData.personal.linkedIn}
+                      onChange={(value) => updatePersonalData('linkedIn', value)}
+                      placeholder="linkedin.com/in/yourprofile"
+                    />
+                    <InputWithAI
+                      label="Professional Summary"
+                      fieldName="summary"
+                      type="textarea"
+                      value={formData.summary}
+                      onChange={(value) => setFormData(prev => ({ ...prev, summary: value }))}
+                      placeholder="Brief professional summary..."
+                      className="min-h-[100px]"
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -159,23 +224,57 @@ const CVGenerator = () => {
                   <CardContent className="space-y-4">
                     {formData.experience.map((exp, index) => (
                       <div key={index} className="space-y-3 p-4 border rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-medium">Experience {index + 1}</h4>
+                          {formData.experience.length > 1 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeExperience(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label>Company</Label>
-                            <Input placeholder="Company name" />
-                          </div>
-                          <div>
-                            <Label>Position</Label>
-                            <Input placeholder="Job title" />
-                          </div>
+                          <InputWithAI
+                            label="Company"
+                            fieldName="company"
+                            value={exp.company}
+                            onChange={(value) => updateExperience(index, 'company', value)}
+                            placeholder="Company name"
+                          />
+                          <InputWithAI
+                            label="Position"
+                            fieldName="position"
+                            value={exp.position}
+                            onChange={(value) => updateExperience(index, 'position', value)}
+                            placeholder="Job title"
+                          />
                         </div>
                         <div>
-                          <Label>Description</Label>
-                          <Textarea placeholder="Key achievements and responsibilities..." />
+                          <Label>Duration</Label>
+                          <Input
+                            value={exp.duration}
+                            onChange={(e) => updateExperience(index, 'duration', e.target.value)}
+                            placeholder="Jan 2020 - Present"
+                          />
                         </div>
+                        <InputWithAI
+                          label="Description"
+                          fieldName="description"
+                          type="textarea"
+                          value={exp.description}
+                          onChange={(value) => updateExperience(index, 'description', value)}
+                          placeholder="Key achievements and responsibilities..."
+                          className="min-h-[100px]"
+                        />
                       </div>
                     ))}
-                    <Button variant="outline" className="w-full">Add Experience</Button>
+                    <Button variant="outline" className="w-full" onClick={addExperience}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Experience
+                    </Button>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -186,19 +285,60 @@ const CVGenerator = () => {
                     <CardTitle>Education</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="space-y-3 p-4 border rounded-lg">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label>Institution</Label>
-                          <Input placeholder="University/School name" />
+                    {formData.education.map((edu, index) => (
+                      <div key={index} className="space-y-3 p-4 border rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-medium">Education {index + 1}</h4>
+                          {formData.education.length > 1 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeEducation(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
-                        <div>
-                          <Label>Degree</Label>
-                          <Input placeholder="Degree/Certification" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <InputWithAI
+                            label="Institution"
+                            fieldName="institution"
+                            value={edu.institution}
+                            onChange={(value) => updateEducation(index, 'institution', value)}
+                            placeholder="University/School name"
+                          />
+                          <InputWithAI
+                            label="Degree"
+                            fieldName="degree"
+                            value={edu.degree}
+                            onChange={(value) => updateEducation(index, 'degree', value)}
+                            placeholder="Degree/Certification"
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label>Year</Label>
+                            <Input
+                              value={edu.year}
+                              onChange={(e) => updateEducation(index, 'year', e.target.value)}
+                              placeholder="2020-2024"
+                            />
+                          </div>
+                          <div>
+                            <Label>GPA (Optional)</Label>
+                            <Input
+                              value={edu.gpa}
+                              onChange={(e) => updateEducation(index, 'gpa', e.target.value)}
+                              placeholder="3.8/4.0"
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <Button variant="outline" className="w-full">Add Education</Button>
+                    ))}
+                    <Button variant="outline" className="w-full" onClick={addEducation}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Education
+                    </Button>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -209,14 +349,15 @@ const CVGenerator = () => {
                     <CardTitle>Skills & Competencies</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div>
-                      <Label>Skills (comma-separated)</Label>
-                      <Textarea
-                        placeholder="JavaScript, React, Python, Leadership, Communication..."
-                        value={formData.skills}
-                        onChange={(e) => setFormData(prev => ({ ...prev, skills: e.target.value }))}
-                      />
-                    </div>
+                    <InputWithAI
+                      label="Skills (comma-separated)"
+                      fieldName="skills"
+                      type="textarea"
+                      value={formData.skills}
+                      onChange={(value) => setFormData(prev => ({ ...prev, skills: value }))}
+                      placeholder="JavaScript, React, Python, Leadership, Communication..."
+                      className="min-h-[100px]"
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -230,15 +371,15 @@ const CVGenerator = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div>
-                      <Label>Job Description</Label>
-                      <Textarea
-                        className="min-h-[200px]"
-                        placeholder="Paste the full job description here..."
-                        value={formData.jobDescription}
-                        onChange={(e) => setFormData(prev => ({ ...prev, jobDescription: e.target.value }))}
-                      />
-                    </div>
+                    <InputWithAI
+                      label="Job Description"
+                      fieldName="jobDescription"
+                      type="textarea"
+                      value={formData.jobDescription}
+                      onChange={(value) => setFormData(prev => ({ ...prev, jobDescription: value }))}
+                      placeholder="Paste the full job description here..."
+                      className="min-h-[200px]"
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>
