@@ -1,67 +1,121 @@
-
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "./useAuth";
+import { User as AuthUser } from "@supabase/supabase-js"; // Renamed to avoid conflict
 
+// Interface for the main admin statistics
 export interface AdminStats {
   totalUsers: number;
   activeUsers: number;
   totalCreditsUsed: number;
-  totalRevenue: number;
+  totalRevenue: number; // Will be 0 for now
+}
+
+// Interface for individual user data for the admin list
+export interface AdminUserView {
+  id: string;
+  email: string | undefined;
+  role: string | undefined; // From profiles table or auth.users metadata
+  credits: number | null; // From credits table
+  created_at: string | undefined;
+  last_sign_in_at: string | null | undefined;
 }
 
 export const useAdminStats = () => {
-  const { user } = useAuth();
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<any>(null);
 
-  return useQuery({
-    queryKey: ['adminStats'],
-    queryFn: async () => {
-      // Get total users count
-      const { count: totalUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
+  useEffect(() => {
+    const fetchStats = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Call the Supabase functions in parallel
+        const [
+          totalUsersRes,
+          activeUsersRes,
+          totalCreditsUsedRes
+        ] = await Promise.all([
+          supabase.rpc('get_total_users'),
+          supabase.rpc('get_active_users_last_30_days'),
+          supabase.rpc('get_total_credits_used_from_activities')
+        ]);
 
-      // Get active users (users with credits > 0)
-      const { count: activeUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .gt('credits', 0);
+        // Check for errors in each response
+        if (totalUsersRes.error) throw new Error(`Total Users Error: ${totalUsersRes.error.message}`);
+        if (activeUsersRes.error) throw new Error(`Active Users Error: ${activeUsersRes.error.message}`);
+        if (totalCreditsUsedRes.error) throw new Error(`Total Credits Used Error: ${totalCreditsUsedRes.error.message}`);
 
-      // Get total credits used from activities
-      const { data: creditsData } = await supabase
-        .from('activities')
-        .select('credits_used');
+        setStats({
+          totalUsers: totalUsersRes.data ?? 0,
+          activeUsers: activeUsersRes.data ?? 0,
+          totalCreditsUsed: totalCreditsUsedRes.data ?? 0,
+          totalRevenue: 0, // Hardcoded for now
+        });
+      } catch (e: any) {
+        console.error("Error fetching admin stats:", e);
+        setError(e.message || e);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      const totalCreditsUsed = creditsData?.reduce((sum, activity) => sum + activity.credits_used, 0) || 0;
+    fetchStats();
+  }, []);
 
-      // Mock revenue calculation (credits * price per credit)
-      const totalRevenue = totalCreditsUsed * 0.1;
-
-      return {
-        totalUsers: totalUsers || 0,
-        activeUsers: activeUsers || 0,
-        totalCreditsUsed,
-        totalRevenue: Math.round(totalRevenue * 100) / 100,
-      };
-    },
-    enabled: !!user?.id,
-  });
+  return {
+    data: stats,
+    isLoading: loading,
+    error: error,
+  };
 };
 
-export const useAllUsers = () => {
-  const { user } = useAuth();
+// Hook for fetching all user data for the admin panel
+export const useAllUsersForAdmin = () => {
+  const [users, setUsers] = useState<AdminUserView[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<any>(null);
 
-  return useQuery({
-    queryKey: ['allUsers'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+  const fetchAllUsers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error: rpcError } = await supabase
+        .rpc('get_all_users_for_admin_view');
 
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id,
-  });
+      if (rpcError) {
+        console.error("Error fetching all users via RPC:", rpcError);
+        setError(rpcError);
+        setUsers([]);
+      } else if (data) {
+        // The RPC function returns columns: id, email, created_at, last_sign_in_at, user_role, credits_remaining
+        const transformedUsers: AdminUserView[] = data.map((user: any) => ({
+          id: user.id,
+          email: user.email,
+          role: user.user_role, // Directly from RPC result
+          credits: user.credits_remaining !== undefined ? user.credits_remaining : null, // Directly from RPC
+          created_at: user.created_at,
+          last_sign_in_at: user.last_sign_in_at,
+        }));
+        setUsers(transformedUsers);
+      }
+    } catch (e) {
+      console.error("Unexpected error fetching all users via RPC:", e);
+      setError(e);
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAllUsers();
+  }, [fetchAllUsers]);
+
+  return {
+    data: users,
+    isLoading: loading,
+    error: error,
+    refresh: fetchAllUsers, // Allow manual refresh
+  };
 };

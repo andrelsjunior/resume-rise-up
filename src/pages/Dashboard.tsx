@@ -1,8 +1,7 @@
 
-import { useAuth } from "@/hooks/useAuthMock";
-import { useProfile } from "@/hooks/useProfileMock";
-import { useActivities } from "@/hooks/useActivitiesMock";
-import { useDeductCredits } from "@/hooks/useProfileMock";
+import { useAuth } from "@/hooks/useAuth";
+import { useActivities } from "@/hooks/useActivities";
+import { useCredits } from "@/hooks/useCredits"; // Import new hook
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -15,33 +14,23 @@ import { useToast } from "@/hooks/use-toast";
 const Dashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { data: profile, isLoading: profileLoading } = useProfile();
+  const {
+    credits: userCredits,
+    isLoading: creditsLoading,
+    checkCredits,
+    refreshCredits
+  } = useCredits();
   const { data: activities, isLoading: activitiesLoading } = useActivities();
-  const deductCredits = useDeductCredits();
+  // const deductCredits = useDeductCredits(); // Removed
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const { toast } = useToast();
 
-  const handleServiceClick = (serviceType: string, credits: number, title: string, route: string) => {
-    if (!profile) {
-      toast({
-        title: "Error",
-        description: "Profile not loaded. Please try again.",
-        variant: "destructive",
-      });
+  const handleServiceClick = (serviceType: string, cost: number, title: string, route: string) => {
+    if (!checkCredits(cost)) { // Use checkCredits from useCredits hook
       return;
     }
-    
-    if (profile.credits < credits) {
-      toast({
-        title: "Insufficient Credits",
-        description: `You need ${credits} credits but only have ${profile.credits}. Please contact support to add more credits.`,
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Navigate first, then deduct credits on the target page
-    navigate(route, { state: { deductCredits: true, credits, serviceType, title } });
+    // Navigate, pass cost and serviceType for deduction on the target page
+    navigate(route, { state: { creditsToDeduct: cost, serviceType, title } });
   };
 
   const getActivityTypeDisplay = (type: string) => {
@@ -57,7 +46,8 @@ const Dashboard = () => {
     }
   };
 
-  if (profileLoading) {
+  // Use creditsLoading for the main loading state if profile is no longer primary source of credits
+  if (creditsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -104,14 +94,17 @@ const Dashboard = () => {
                 <CardDescription>Use credits to generate CVs, cover letters, and mock interviews</CardDescription>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold">{profile?.credits || 0}</div>
-                <div className="text-sm text-gray-500">of {profile?.max_credits || 100}</div>
+                <div className="text-2xl font-bold">{userCredits ?? 0}</div>
+                {/* Max credits concept removed for now, adjust if needed */}
+                {/* <div className="text-sm text-gray-500">of 100</div> */}
               </div>
             </div>
           </CardHeader>
           <CardContent>
+            {/* Progress bar might need adjustment if max_credits is not available */}
+            {/* For now, let's assume a default max or hide if not sensible */}
             <Progress 
-              value={profile ? (profile.credits / profile.max_credits) * 100 : 0} 
+              value={userCredits !== undefined && userCredits !== null ? (userCredits / 100) * 100 : 0} // Assuming 100 is max if not specified
               className="w-full" 
             />
           </CardContent>
@@ -134,7 +127,7 @@ const Dashboard = () => {
               <Button 
                 className="w-full" 
                 onClick={() => handleServiceClick('cv_generated', 5, 'Generated CV', '/cv-generator')}
-                disabled={!profile || profile.credits < 5}
+                disabled={creditsLoading || (userCredits !== undefined && userCredits !== null && userCredits < 5)}
               >
                 Generate CV (5 credits)
               </Button>
@@ -156,7 +149,7 @@ const Dashboard = () => {
               <Button 
                 className="w-full"
                 onClick={() => handleServiceClick('cover_letter_generated', 3, 'Generated Cover Letter', '/cover-letter')}
-                disabled={!profile || profile.credits < 3}
+                disabled={creditsLoading || (userCredits !== undefined && userCredits !== null && userCredits < 3)}
               >
                 Write Cover Letter (3 credits)
               </Button>
@@ -178,7 +171,7 @@ const Dashboard = () => {
               <Button 
                 className="w-full"
                 onClick={() => handleServiceClick('mock_interview_completed', 10, 'Completed Mock Interview', '/mock-interview')}
-                disabled={!profile || profile.credits < 10}
+                disabled={creditsLoading || (userCredits !== undefined && userCredits !== null && userCredits < 10)}
               >
                 Start Interview (10 credits)
               </Button>
