@@ -1,6 +1,6 @@
 
-import { useProfile } from "@/hooks/useProfileMock";
-import { useToast } from "@/hooks/use-toast";
+import { useProfile } from "./useProfileMock";
+import { useToast } from "./use-toast";
 
 export const useCredits = () => {
   const { data: profile } = useProfile();
