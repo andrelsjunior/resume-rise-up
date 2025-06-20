@@ -1,7 +1,7 @@
 
 import { useState } from "react";
-import { useProfile } from "@/hooks/useProfile";
-import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfileMock";
+import { useAuth } from "@/hooks/useAuthMock";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
