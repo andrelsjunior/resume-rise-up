@@ -1,6 +1,6 @@
 
-import { useAuth } from "@/hooks/useAuthMock";
-import { useAdminStats, useAllUsers } from "@/hooks/useAdminStatsMock";
+import { useAuth } from "@/hooks/useAuth";
+import { useAdminStats, useAllUsersForAdmin } from "@/hooks/useAdminStats";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,7 +12,7 @@ import { Users, CreditCard, FileText, TrendingUp, LogOut, User, Loader2 } from "
 const AdminDashboard = () => {
   const { user, signOut } = useAuth();
   const { data: stats, isLoading: statsLoading } = useAdminStats();
-  const { data: users, isLoading: usersLoading } = useAllUsers();
+  const { data: users, isLoading: usersLoading, refresh: refreshUsers } = useAllUsersForAdmin();
   const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   if (statsLoading) {

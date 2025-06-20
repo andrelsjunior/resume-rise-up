@@ -8,10 +8,14 @@ import { ArrowLeft, Download, FileText, Loader2 } from "lucide-react";
 import { InputWithAI } from "@/components/InputWithAI";
 import { HelpVideoButton } from "@/components/HelpVideoButton";
 import { useToast } from "@/hooks/use-toast";
+import { useCredits } from "@/hooks/useCredits"; // Import useCredits
+
+const COST_OF_CV_GENERATION = 5; // Define cost
 
 const CVGenerator = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { checkCredits, spendCredits, isLoading: creditsLoading } = useCredits(); // Initialize hook
   const [generating, setGenerating] = useState(false);
 
   const [personalInfo, setPersonalInfo] = useState({
@@ -56,17 +60,52 @@ const CVGenerator = () => {
   });
 
   const handleGenerate = async () => {
+    // Prevent action if credits are still loading
+    if (creditsLoading) {
+      toast({
+        title: "Aguarde",
+        description: "Verificando seus créditos...",
+      });
+      return;
+    }
+
+    // 1. Check if user has enough credits
+    if (!checkCredits(COST_OF_CV_GENERATION)) {
+      return; // checkCredits already shows a toast
+    }
+
     setGenerating(true);
     try {
+      // Simulate actual CV generation process (e.g., API call to an AI service)
+      // This is where your actual CV generation logic would go.
+      // For now, it's a 3-second delay.
       await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // 2. If generation is successful, try to spend credits
+      const creditsSpentSuccessfully = await spendCredits(COST_OF_CV_GENERATION);
+
+      if (creditsSpentSuccessfully) {
+        toast({
+          title: "CV Generated Successfully!",
+          description: "Your professional CV has been created and is ready for download. Credits have been deducted.",
+        });
+        // Potentially trigger download or enable download button here
+      } else {
+        // spendCredits hook already shows a toast for failure,
+        // but you might want to add more specific handling or logging here.
+        // For example, if credits couldn't be spent due to a server error AFTER generation,
+        // this is a state you need to handle (e.g., grant the CV for free, log for admin review).
+        toast({
+          title: "CV Generated, but Credit Deduction Issue",
+          description: "Please contact support if credits were not deducted correctly.",
+          variant: "destructive", // Or "warning"
+        });
+      }
+    } catch (error: any) {
+      console.error("Error during CV generation:", error);
       toast({
-        title: "CV Generated Successfully!",
-        description: "Your professional CV has been created and is ready for download.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to generate CV. Please try again.",
+        title: "Error Generating CV",
+        description: error.message || "Failed to generate CV. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -403,7 +442,7 @@ const CVGenerator = () => {
         </Tabs>
 
         <div className="flex justify-center space-x-4 mt-8">
-          <Button onClick={handleGenerate} disabled={generating} size="lg">
+          <Button onClick={handleGenerate} disabled={generating || creditsLoading} size="lg">
             {generating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

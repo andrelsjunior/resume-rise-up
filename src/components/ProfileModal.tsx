@@ -1,7 +1,7 @@
 
 import { useState } from "react";
-import { useProfile } from "@/hooks/useProfileMock";
-import { useAuth } from "@/hooks/useAuthMock";
+import { useProfile } from "@/hooks/useProfile"; // Updated import
+// import { useAuth } from "@/hooks/useAuthMock"; // Removed useAuth
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,8 +15,8 @@ interface ProfileModalProps {
 }
 
 export const ProfileModal = ({ open, onOpenChange }: ProfileModalProps) => {
-  const { user } = useAuth();
-  const { data: profile, isLoading } = useProfile();
+  // const { user } = useAuth(); // Removed useAuth
+  const { profile, isLoading, error, refreshProfile } = useProfile(); // Use new hook structure
 
   if (isLoading || !profile) {
     return (
@@ -34,7 +34,9 @@ export const ProfileModal = ({ open, onOpenChange }: ProfileModalProps) => {
     );
   }
 
-  const creditPercentage = (profile.credits / profile.max_credits) * 100;
+  // Adjust creditPercentage as max_credits is no longer available
+  // For example, if 100 is a typical max, or show full if credits > 0.
+  const creditPercentage = profile.credits ? (profile.credits > 100 ? 100 : (profile.credits / 100) * 100) : 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -61,19 +63,19 @@ export const ProfileModal = ({ open, onOpenChange }: ProfileModalProps) => {
             <CardContent className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Email:</span>
-                <span className="text-sm text-gray-600">{user?.email}</span>
+                <span className="text-sm text-gray-600">{profile.email}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Role:</span>
                 <Badge variant={profile.role === 'admin' ? 'default' : 'secondary'}>
                   {profile.role === 'admin' && <Crown className="h-3 w-3 mr-1" />}
-                  {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
+                  {profile.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : 'N/A'}
                 </Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Member since:</span>
                 <span className="text-sm text-gray-600">
-                  {new Date(profile.created_at).toLocaleDateString()}
+                  {profile.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}
                 </span>
               </div>
             </CardContent>
@@ -92,12 +94,13 @@ export const ProfileModal = ({ open, onOpenChange }: ProfileModalProps) => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-2xl font-bold">{profile.credits}</span>
-                <span className="text-sm text-gray-500">of {profile.max_credits}</span>
+                <span className="text-2xl font-bold">{profile.credits ?? 0}</span>
+                {/* Removed "of max_credits" display */}
               </div>
               <Progress value={creditPercentage} className="w-full" />
               <div className="text-xs text-gray-500 text-center">
-                {creditPercentage.toFixed(1)}% of your credit limit used
+                {/* Adjusted text as max_credits is not fixed */}
+                {profile.credits ? `${creditPercentage.toFixed(0)}% of assumed capacity` : 'No credits'}
               </div>
             </CardContent>
           </Card>
@@ -105,7 +108,7 @@ export const ProfileModal = ({ open, onOpenChange }: ProfileModalProps) => {
           {/* Last Updated */}
           <div className="flex items-center justify-center text-xs text-gray-500">
             <Calendar className="h-3 w-3 mr-1" />
-            Last updated: {new Date(profile.updated_at).toLocaleString()}
+            {profile.updated_at ? `Last updated: ${new Date(profile.updated_at).toLocaleString()}` : 'Profile not recently updated'}
           </div>
         </div>
 
