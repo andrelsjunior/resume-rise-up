@@ -1,0 +1,138 @@
+version: '3.8'
+
+services:
+  # Frontend Application (ResumeRise)
+  frontend:
+    build:
+      context: . # Assumes Dockerfile is in the project root
+      dockerfile: Dockerfile
+    container_name: resumerise_frontend
+    ports:
+      - "8080:80" # Host:Container - Nginx in frontend Dockerfile listens on 80
+    depends_on:
+      - kong # Wait for Supabase API gateway
+    networks:
+      - app_network
+    # If your frontend needs to know the Supabase URL/Key at runtime via Docker env vars
+    # (instead of baked in at build time from .env), you could add them here.
+    # However, our current frontend Dockerfile bakes them in from .env at build time.
+    # environment:
+    #   - VITE_SUPABASE_URL=http://localhost:8000 # Example if Kong is on 8000
+    #   - VITE_SUPABASE_ANON_KEY=YOUR_LOCAL_SUPABASE_ANON_KEY
+
+  # Supabase Services (Simplified based on common local setups)
+  # For a more robust/official setup, using `supabase start` (which manages its own compose file) is often preferred.
+
+  db:
+    image: supabase/postgres:15.1.0.118 # Use a specific version
+    container_name: supabase_db_resumerise
+    ports:
+      - "54322:5432" # Expose local DB on host port 54322 (to avoid conflict if local PG is on 5432)
+    environment:
+      POSTGRES_USER: supabase
+      POSTGRES_PASSWORD: your_strong_password_here # !! CHANGE THIS !!
+      POSTGRES_DB: postgres
+      # Add any other PG specific env vars if needed
+    volumes:
+      - supabase_db_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U supabase -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  kong:
+    image: supabase/kong:latest # Or a specific version
+    container_name: supabase_kong_resumerise
+    ports:
+      - "8000:8000" # Supabase API Gateway (local default)
+    environment:
+      # Kong needs to know where Postgres is
+      KONG_DATABASE: "postgres"
+      KONG_PG_HOST: db # Service name of the postgres container
+      KONG_PG_USER: supabase
+      KONG_PG_PASSWORD: your_strong_password_here # !! Must match POSTGRES_PASSWORD !!
+      KONG_PROXY_LISTEN: "0.0.0.0:8000"
+      KONG_ADMIN_LISTEN: "0.0.0.0:8001" # Kong admin API (optional to expose)
+      # Supabase specific Kong configurations (defaults are usually okay for local)
+      # Refer to Supabase docs for all Kong env vars if needing customization
+      SUPABASE_JWT_SECRET: your_super_secret_jwt_token_at_least_32_chars_long # !! CHANGE THIS !!
+      # ... other KONG_ and SUPABASE_ vars for Kong might be needed based on full setup
+      # This is a simplified set. The anon and service keys are derived or set elsewhere in full Supabase.
+      # For a manually managed setup, you might need to explicitly define ANON_KEY and SERVICE_ROLE_KEY here
+      # if they are not automatically generated/handled by the auth service connecting to Kong.
+      # However, typically these are managed by the GoTrue (auth) service.
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app_network
+    restart: unless-stopped
+
+  auth:
+    image: supabase/gotrue:latest # Or a specific version
+    container_name: supabase_auth_resumerise
+    environment:
+      GOTRUE_API_HOST: "0.0.0.0"
+      GOTRUE_API_PORT: "9999"
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgresql://supabase:your_strong_password_here@db:5432/postgres # !! Must match POSTGRES_PASSWORD !!
+      GOTRUE_SITE_URL: http://localhost:8080 # Your frontend URL for email links
+      GOTRUE_URI_SCHEMES: "http,https"
+      GOTRUE_JWT_SECRET: your_super_secret_jwt_token_at_least_32_chars_long # !! Must match KONG's !!
+      GOTRUE_JWT_EXP: "3600"
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_MAILER_AUTOCONFIRM: "true" # For local dev, auto-confirm emails
+      # GOTRUE_MAILER_URLS_CONFIRMATION: "{{ .SiteURL }}/confirm?token={{ .Token }}"
+      # ... other GoTrue settings (SMTP for real emails, social providers etc.)
+      # The ANON_KEY and SERVICE_ROLE_KEY are usually derived from JWT_SECRET or set here for GoTrue to work with Kong
+      # For a manual setup, ensuring these align is key. Often, GoTrue generates tokens Kong validates.
+      # The Supabase CLI handles the complexity of ensuring keys match.
+      # A typical local default anon key might look like:
+      # GOTRUE_JWT_DEFAULT_GROUP_NAME_FOR_SIGNED_UP_USERS: "authenticated"
+      # GOTRUE_JWT_AUD: "authenticated"
+      # It's safer to let Supabase CLI generate these. For manual, you might need to set placeholder static keys
+      # and ensure they are used by the frontend and match Kong's expectation.
+      # For simplicity, we'll assume Kong/GoTrue can derive them or use defaults if not explicitly set here.
+      # Placeholder for where you'd ensure keys are known:
+      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0" # Example local anon key - REPLACE if you generate specific ones
+      SUPABASE_SERVICE_ROLE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6Ezk4MzgxMjk5Nn0.Mzc5N2Y2YjRjY2RkZGU5M2U4MmEwNGFmYmU1YjQ0ZTRhM2E5MTAyM2M1M2RjMjA4ZDAxNTIzMGIyNDhkYjdh" # Example local service key - REPLACE
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app_network
+    restart: unless-stopped
+
+  # Add other Supabase services as needed: storage, realtime, functions, meta (for Studio)
+
+  # Supabase Studio (Local Dashboard)
+  studio:
+    image: supabase/studio:latest
+    container_name: supabase_studio_resumerise
+    ports:
+      - "54323:3000" # Host:Container for Studio UI
+    environment:
+      STUDIO_PG_META_URL: "http://localhost:8080/pg" # This needs pg_meta, often run by `supabase/meta` image or handled differently.
+      # The studio setup can be complex. Typically it expects a `supabase/meta` service.
+      # For a simpler setup, you might connect to the DB using an external tool or rely on cloud Studio.
+      # A more complete Studio setup often involves a 'meta' service.
+      # This is a very basic Studio placeholder.
+      SUPABASE_URL: "http://kong:8000" # Studio needs to know the API URL
+      SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0" # Must match what Kong/Auth uses
+    depends_on:
+      - db
+      - kong
+    networks:
+      - app_network
+    restart: unless-stopped
+
+volumes:
+  supabase_db_data: # Persists PostgreSQL data
+
+networks:
+  app_network:
+    driver: bridge
