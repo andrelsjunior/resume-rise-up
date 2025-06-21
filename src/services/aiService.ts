@@ -1,10 +1,11 @@
-
 export interface AIGenerateRequest {
   fieldName: string;
-  currentText: string;
+  currentText: string; // Keep as string, can be empty
   context?: string;
 }
 
+// AIGenerateResponse can be removed if not used elsewhere, as generateWithAI now directly returns string.
+// For now, let's keep it in case other parts of the app expect this type definition.
 export interface AIGenerateResponse {
   generatedText: string;
 }
