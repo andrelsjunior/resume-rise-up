@@ -1,23 +1,23 @@
+
 import { useState, useEffect, useCallback } from "react";
-import { useAuth } from "./useAuth"; // Use the real useAuth
-import { useCredits } from "./useCredits"; // Use the real useCredits
+import { useAuth } from "./useAuth";
+import { useCredits } from "./useCredits";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 
-// Updated Profile interface (omitting max_credits for now)
 export interface Profile {
   id: string;
-  email: string | undefined; // email is from auth.users
-  role: string | null; // from profiles table
-  full_name: string | null; // from profiles table
-  avatar_url: string | null; // from profiles table
-  credits: number | null; // from useCredits hook
-  created_at: string | undefined; // from auth.users (user registration time)
-  updated_at: string | null; // from profiles table (profile last updated)
+  email: string | undefined;
+  role: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+  credits: number | null;
+  created_at: string | undefined;
+  updated_at: string | null;
 }
 
 export const useProfile = () => {
-  const { user:authUser, loading: authLoading } = useAuth(); // authUser from Supabase Auth
+  const { user: authUser, loading: authLoading } = useAuth();
   const { credits, isLoading: creditsLoading, error: creditsError, refreshCredits } = useCredits();
 
   const [profileData, setProfileData] = useState<Omit<Profile, 'credits' | 'email' | 'id' | 'created_at'> | null>(null);
@@ -41,10 +41,8 @@ export const useProfile = () => {
         .single();
 
       if (fetchError) {
-        // It's possible a profile row doesn't exist yet if the trigger failed or was not set up.
-        if (fetchError.code === 'PGRST116') { // Not found
-          console.warn("Profile not found for user:", currentAuthUser.id, "Consider creating one.");
-          // Set default/empty profile data or let it be null based on app logic
+        if (fetchError.code === 'PGRST116') {
+          console.warn("Profile not found for user:", currentAuthUser.id);
           setProfileData({ full_name: null, avatar_url: null, role: 'customer', updated_at: null });
         } else {
           console.error("Error fetching profile data:", fetchError);
@@ -66,13 +64,13 @@ export const useProfile = () => {
   useEffect(() => {
     if (authUser) {
       fetchProfileData(authUser);
-    } else if (!authLoading) { // If auth is done loading and there's no user
+    } else if (!authLoading) {
       setProfileData(null);
       setLoading(false);
     }
   }, [authUser, authLoading, fetchProfileData]);
 
-  const updateProfile = async (updates: { full_name?: string; avatar_url?: string; /* role changes handled by admin */ }) => {
+  const updateProfile = async (updates: { full_name?: string; avatar_url?: string }) => {
     if (!authUser) {
       throw new Error("User not authenticated");
     }
@@ -82,15 +80,14 @@ export const useProfile = () => {
         .from("profiles")
         .update(updates)
         .eq("id", authUser.id)
-        .select("full_name, avatar_url, role, updated_at") // Ensure we select all fields that make up profileData
+        .select("full_name, avatar_url, role, updated_at")
         .single();
 
       if (updateError) {
         throw updateError;
       }
       if (data) {
-        setProfileData(data); // Update local state with the new profile data
-        // await fetchProfileData(authUser); // Re-fetch is redundant if select returns all needed data
+        setProfileData(data);
       }
       return data;
     } catch (e: any) {
@@ -102,18 +99,17 @@ export const useProfile = () => {
     }
   };
 
-  // Combine all data into the Profile object
   const combinedProfile: Profile | null = authUser && profileData !== null ? {
       id: authUser.id,
       email: authUser.email,
       created_at: authUser.created_at,
-      ...profileData, // contains full_name, avatar_url, role, updated_at
-      credits: credits ?? null, // Use fetched credits, default to null if not available
+      ...profileData,
+      credits: credits ?? null,
   } : null;
 
   return {
     profile: combinedProfile,
-    isLoading: authLoading || loading || creditsLoading, // Overall loading state
+    isLoading: authLoading || loading || creditsLoading,
     error: error || creditsError,
     updateProfile,
     refreshProfile: () => {

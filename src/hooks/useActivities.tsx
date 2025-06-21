@@ -1,16 +1,16 @@
+
 import { useState, useEffect } from "react";
-import { useAuth } from "./useAuth"; // Use the real useAuth
+import { useAuth } from "./useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
-// Keep the same Activity interface as the mock for now
 export interface Activity {
-  id: string; // Or number, if we use bigserial consistently
+  id: string;
   user_id: string;
   activity_type: string;
-  title: string; // Will come from 'details' jsonb field
-  credits_used: number; // Will come from 'details' jsonb field
-  score: number | null; // Will come from 'details' jsonb field
-  metadata: Record<string, any>; // Will come from 'details' jsonb field
+  title: string;
+  credits_used: number;
+  score: number | null;
+  metadata: Record<string, any>;
   created_at: string;
 }
 
@@ -37,17 +37,14 @@ export const useActivities = () => {
             setError(fetchError);
             setActivities([]);
           } else if (data) {
-            // Transform the data from the 'activities' table
-            // to match the 'Activity' interface.
             const transformedActivities: Activity[] = data.map((activity: any) => ({
-              id: String(activity.id), // Ensure id is string if interface expects string
+              id: String(activity.id),
               user_id: activity.user_id,
               activity_type: activity.activity_type,
-              // Extract title, credits_used, score, metadata from the 'details' field
-              title: activity.details?.title || 'N/A',
-              credits_used: activity.details?.credits_used || 0,
-              score: activity.details?.score !== undefined ? activity.details.score : null,
-              metadata: activity.details?.metadata || {},
+              title: activity.title,
+              credits_used: activity.credits_used,
+              score: activity.score,
+              metadata: activity.metadata || {},
               created_at: activity.created_at,
             }));
             setActivities(transformedActivities);
@@ -63,7 +60,6 @@ export const useActivities = () => {
 
       fetchActivities();
     } else {
-      // No user, clear activities and set loading to false
       setActivities([]);
       setLoading(false);
     }

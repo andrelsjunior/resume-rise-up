@@ -1,7 +1,7 @@
 
-import { useAuth } from "@/hooks/useAuthMock";
+import { useAuth } from "@/hooks/useAuth"; // Use real auth
 import { useActivities } from "@/hooks/useActivities";
-import { useCredits } from "@/hooks/useCredits"; // Import new hook
+import { useCredits } from "@/hooks/useCredits";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -21,15 +21,13 @@ const Dashboard = () => {
     refreshCredits
   } = useCredits();
   const { data: activities, isLoading: activitiesLoading } = useActivities();
-  // const deductCredits = useDeductCredits(); // Removed
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const { toast } = useToast();
 
   const handleServiceClick = (serviceType: string, cost: number, title: string, route: string) => {
-    if (!checkCredits(cost)) { // Use checkCredits from useCredits hook
+    if (!checkCredits(cost)) {
       return;
     }
-    // Navigate, pass cost and serviceType for deduction on the target page
     navigate(route, { state: { creditsToDeduct: cost, serviceType, title } });
   };
 
@@ -46,7 +44,6 @@ const Dashboard = () => {
     }
   };
 
-  // Use creditsLoading for the main loading state if profile is no longer primary source of credits
   if (creditsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -95,16 +92,12 @@ const Dashboard = () => {
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold">{userCredits ?? 0}</div>
-                {/* Max credits concept removed for now, adjust if needed */}
-                {/* <div className="text-sm text-gray-500">of 100</div> */}
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            {/* Progress bar might need adjustment if max_credits is not available */}
-            {/* For now, let's assume a default max or hide if not sensible */}
             <Progress 
-              value={userCredits !== undefined && userCredits !== null ? (userCredits / 100) * 100 : 0} // Assuming 100 is max if not specified
+              value={userCredits !== undefined && userCredits !== null ? (userCredits / 100) * 100 : 0}
               className="w-full" 
             />
           </CardContent>
@@ -193,19 +186,6 @@ const Dashboard = () => {
             ) : activities && activities.length > 0 ? (
               <div className="space-y-4">
                 {activities.map((activity) => {
-                  const getActivityTypeDisplay = (type: string) => {
-                    switch (type) {
-                      case 'cv_generated':
-                        return { icon: FileText, color: 'text-blue-600', label: 'CV Generated' };
-                      case 'cover_letter_generated':
-                        return { icon: FileText, color: 'text-green-600', label: 'Cover Letter Generated' };
-                      case 'mock_interview_completed':
-                        return { icon: MessageSquare, color: 'text-purple-600', label: 'Mock Interview Completed' };
-                      default:
-                        return { icon: FileText, color: 'text-gray-600', label: type };
-                    }
-                  };
-                  
                   const { icon: Icon, color, label } = getActivityTypeDisplay(activity.activity_type);
                   return (
                     <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">

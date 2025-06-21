@@ -1,7 +1,7 @@
 
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuthMock";
+import { useAuth } from "@/hooks/useAuth"; // Use real auth
 import { Loader2 } from "lucide-react";
 
 const Index = () => {
@@ -13,7 +13,6 @@ const Index = () => {
       if (!user) {
         navigate("/auth");
       } else {
-        // For mock, we'll just go to dashboard since we don't have role metadata
         navigate("/dashboard");
       }
     }

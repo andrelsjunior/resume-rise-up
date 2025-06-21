@@ -14,6 +14,7 @@ export type Database = {
           activity_type: string
           created_at: string | null
           credits_used: number
+          details: Json | null
           id: string
           metadata: Json | null
           score: number | null
@@ -24,6 +25,7 @@ export type Database = {
           activity_type: string
           created_at?: string | null
           credits_used: number
+          details?: Json | null
           id?: string
           metadata?: Json | null
           score?: number | null
@@ -34,6 +36,7 @@ export type Database = {
           activity_type?: string
           created_at?: string | null
           credits_used?: number
+          details?: Json | null
           id?: string
           metadata?: Json | null
           score?: number | null
@@ -42,29 +45,119 @@ export type Database = {
         }
         Relationships: []
       }
+      cover_letters: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      credits: {
+        Row: {
+          credits_remaining: number
+          id: string
+          last_updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          credits_remaining?: number
+          id?: string
+          last_updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          credits_remaining?: number
+          id?: string
+          last_updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mock_interviews: {
+        Row: {
+          created_at: string | null
+          id: string
+          interview_type: string
+          job_description: string | null
+          overall_feedback: string | null
+          overall_score: number | null
+          questions_and_answers: Json
+          status: string | null
+          user_id: string
+          user_resume_text: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          interview_type: string
+          job_description?: string | null
+          overall_feedback?: string | null
+          overall_score?: number | null
+          questions_and_answers: Json
+          status?: string | null
+          user_id: string
+          user_resume_text?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          interview_type?: string
+          job_description?: string | null
+          overall_feedback?: string | null
+          overall_score?: number | null
+          questions_and_answers?: Json
+          status?: string | null
+          user_id?: string
+          user_resume_text?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string | null
           credits: number | null
           email: string | null
+          full_name: string | null
           id: string
           max_credits: number | null
           role: string | null
           updated_at: string | null
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string | null
           credits?: number | null
           email?: string | null
+          full_name?: string | null
           id: string
           max_credits?: number | null
           role?: string | null
           updated_at?: string | null
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string | null
           credits?: number | null
           email?: string | null
+          full_name?: string | null
           id?: string
           max_credits?: number | null
           role?: string | null
@@ -85,6 +178,10 @@ export type Database = {
           p_title: string
           p_metadata?: Json
         }
+        Returns: boolean
+      }
+      spend_user_credits: {
+        Args: { p_user_id: string; p_credits_to_spend: number }
         Returns: boolean
       }
     }
