@@ -1,5 +1,5 @@
 
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuthMock";
 import { useActivities } from "@/hooks/useActivities";
 import { useCredits } from "@/hooks/useCredits"; // Import new hook
 import { Button } from "@/components/ui/button";
