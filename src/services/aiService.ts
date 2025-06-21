@@ -1,52 +1,48 @@
-
-import OpenAI from 'openai';
-
 export interface AIGenerateRequest {
   fieldName: string;
-  currentText: string;
+  currentText: string; // Keep as string, can be empty
   context?: string;
 }
 
+// AIGenerateResponse can be removed if not used elsewhere, as generateWithAI now directly returns string.
+// For now, let's keep it in case other parts of the app expect this type definition.
 export interface AIGenerateResponse {
   generatedText: string;
 }
 
-const openai = new OpenAI();
-
 export const generateWithAI = async (request: AIGenerateRequest): Promise<string> => {
-  const { fieldName, currentText, context } = request;
-
-  let prompt = "";
-  if (currentText && currentText.trim() !== "") {
-    prompt = `Enhance the following text for the field '${fieldName}': ${currentText}.`;
-  } else {
-    prompt = `Generate a suitable value for the field '${fieldName}'.`;
-  }
-
-  if (context) {
-    prompt += ` Context: ${context}`;
-  }
-
-  console.log("Sending prompt to OpenAI:", prompt);
-
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      max_tokens: 150,
+    const response = await fetch('/api/ai/generate', { // Assuming backend is on the same origin
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
     });
 
-    console.log("Raw response from OpenAI:", response);
-
-    if (response.choices && response.choices.length > 0 && response.choices[0].message && response.choices[0].message.content) {
-      return response.choices[0].message.content.trim();
-    } else {
-      console.error('Unexpected response structure from OpenAI:', response);
-      throw new Error('Falha ao gerar conteúdo com AI: Resposta inesperada da API.');
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        // Ignore if response is not JSON
+      }
+      const errorMessage = errorData?.error || `Error from server: ${response.status} ${response.statusText}`;
+      console.error('Error generating AI content:', errorMessage);
+      throw new Error(errorMessage);
     }
-  } catch (error) {
-    console.error('Error generating AI content:', error);
-    throw new Error('Falha ao gerar conteúdo com AI. Tente novamente.');
+
+    const data: AIGenerateResponse = await response.json();
+    if (!data.generatedText) {
+      console.error('Error generating AI content: No generatedText in response from backend');
+      throw new Error('Failed to generate content: No text received from server.');
+    }
+    return data.generatedText;
+
+  } catch (error: any) {
+    console.error('Error generating AI content:', error.message);
+    // Re-throw the error so it can be caught by the calling hook (useAIGenerate)
+    // The hook is responsible for user-facing error messages (toasts).
+    throw error; // Rethrow the original error or a new one if preferred
   }
 };
